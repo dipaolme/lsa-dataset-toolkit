@@ -1,0 +1,12 @@
+yt-dlp
+opencv-python
+mediapipe
+pysrt
+webvtt-py
+pandas
+numpy
+matplotlib
+jupyter
+ipywidgets
+pytesseract
+PyYAML
