@@ -2,6 +2,7 @@ data/raw/
 data/subtitles/
 data/keypoints/
 data/dataset/
+data/catalog/
 *.pyc
 __pycache__/
 .ipynb_checkpoints/

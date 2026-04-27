@@ -3,6 +3,19 @@ paths:
   subtitles: data/subtitles
   keypoints: data/keypoints
   dataset: data/dataset
+  catalog: data/catalog
+
+channel:
+  url: ""  # completar con la URL del canal antes de correr
+
+catalog:
+  path: data/catalog
+
+ocr:
+  sample_frames: 5
+  sample_times_sec: [5, 10, 30, 60, 90]
+  bottom_fraction: 0.35
+  text_threshold: 3        # mínimo de frames con texto → "hardcoded"
 
 download:
   format: "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
