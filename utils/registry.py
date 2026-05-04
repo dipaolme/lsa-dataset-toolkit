@@ -17,11 +17,12 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT = Path(__file__).parent.parent  # lsa-dataset-toolkit/
+sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
-REGISTRY_PATH = Path("data/catalog/video_registry.json")
+REGISTRY_PATH = ROOT / "data/catalog/video_registry.json"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -69,8 +70,8 @@ def _video_stem(filename: str) -> str:
 
 
 def build_registry(
-    csv_path: Path = Path("data/catalog/yt_vs_local_matching.csv"),
-    videos_dir: Path = Path("data/raw/matched_videos"),
+    csv_path: Path = None,
+    videos_dir: Path = None,
 ) -> dict:
     """
     Construye el registro desde el CSV de matching y los MP4 en matched_videos/.
@@ -81,6 +82,10 @@ def build_registry(
     Returns:
         Dict keyed by video stem (e.g. "DSC_0873 p.87 ...").
     """
+    if csv_path is None:
+        csv_path = ROOT / "data/catalog/yt_vs_local_matching.csv"
+    if videos_dir is None:
+        videos_dir = ROOT / "data/raw/matched_videos"
     df = pd.read_csv(csv_path)
     matched = df[df["match"] == "OK"].copy()
 
