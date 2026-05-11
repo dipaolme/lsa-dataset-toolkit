@@ -1,7 +1,7 @@
 paths:
   raw: data/raw
   videos: /mnt/c/Users/mdp_e/Gobierno de la Ciudad de Buenos Aires/grupo_DG Inclusión Digital - Documents/02-Proyectos/08-Avatar AI/Material LSA/GUÍA INFO LSA 2018-2019/videos
-  subs_docx: /mnt/c/Users/mdp_e/Gobierno de la Ciudad de Buenos Aires/grupo_DG Inclusión Digital - Documents/02-Proyectos/08-Avatar AI/Material LSA/GUÍA INFO LSA 2018-2019/Guia Subs.docx
+  subs_docx: data/raw/GUÍA INFO LSA 2018-2019/Guia Subs.docx
   subtitles: data/subtitles
   keypoints: data/keypoints
   dataset: data/dataset

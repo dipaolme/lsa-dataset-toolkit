@@ -1,41 +1,9 @@
-"""Parse Guia Subs.docx — maps DSC video N° to subtitle text."""
-import re
-import sys
-from dataclasses import dataclass
+"""
+parse_subs_docx.py — Re-exporta desde utils/docx_parser para compatibilidad
+con notebooks y código existente que importa desde scripts/.
+"""
 from pathlib import Path
-
-from docx import Document
-
-
-@dataclass
-class VideoSub:
-    video_num: int
-    note: str       # e.g. 'arranca 00:24s', 'primera parte + 1028'
-    text: str
-
-
-# Matches: N° 795: texto  |  N° 812 (nota): texto  |  N° 818 (nota) texto
-_ENTRY = re.compile(
-    r'N[°º]\s*(\d+)\s*(?:\(([^)]*)\))?\s*[:\.]?\s*(.*)',
-    re.DOTALL,
-)
-
-
-def parse_subs_docx(path: Path) -> list[VideoSub]:
-    doc = Document(str(path))
-    subs = []
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
-            continue
-        m = _ENTRY.match(text)
-        if not m:
-            continue
-        num = int(m.group(1))
-        note = (m.group(2) or "").strip()
-        content = m.group(3).strip()
-        subs.append(VideoSub(video_num=num, note=note, text=content))
-    return subs
+from utils.docx_parser import parse_subs_docx, VideoSub  # noqa: F401
 
 
 def topic_from_text(text: str) -> str:
@@ -65,10 +33,11 @@ def topic_from_text(text: str) -> str:
 
 
 if __name__ == "__main__":
+    import sys
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
         "data/raw/GUÍA INFO LSA 2018-2019/Guia Subs.docx"
     )
     subs = parse_subs_docx(path)
     print(f"Total subtítulos parseados: {len(subs)}\n")
     for s in subs:
-        print(f"N° {s.video_num:4d}  [{topic_from_text(s.text):15s}]  {s.text[:80]}...")
+        print(f"N° {s.video_num:4d}  {s.text[:80]}...")

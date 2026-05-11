@@ -15,10 +15,13 @@ def load_config(config_path="config.yaml"):
         return yaml.safe_load(f)
 
 
+_YTDLP = str(Path(__file__).parent.parent / ".venv/bin/yt-dlp")
+
+
 def _yt_dlp_flat_json(url: str) -> dict:
     """Run yt-dlp --flat-playlist --dump-single-json on a URL (fast, basic fields only)."""
     result = subprocess.run(
-        ["yt-dlp", "--flat-playlist", "--dump-single-json", "--no-warnings", url],
+        [_YTDLP, "--flat-playlist", "--dump-single-json", "--no-warnings", url],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -207,7 +210,7 @@ def load_catalog(config: dict, name: str = "channel_catalog") -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch YouTube channel/playlist catalog")
-    parser.add_argument("channel_url", help="YouTube channel or playlist URL")
+    parser.add_argument("channel_url", nargs="+", help="Una o más URLs de playlist/canal")
     parser.add_argument("--config", default="config.yaml")
     parser.add_argument("--name", default="channel_catalog",
                         help="Catalog filename (without extension). Default: channel_catalog")
@@ -218,9 +221,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = load_config(args.config)
-    existing = load_catalog(config, args.name)
-    catalog = build_catalog(args.channel_url, config, existing,
-                            full_metadata=args.full_metadata)
+
+    # Acumula playlists de todas las URLs sin duplicados
+    seen_ids: set = set()
+    all_playlists: list = []
+
+    for url in args.channel_url:
+        partial = build_catalog(url, config, existing=None, full_metadata=args.full_metadata)
+        for pl in partial["playlists"]:
+            unique = [v for v in pl["videos"] if v["video_id"] not in seen_ids]
+            seen_ids.update(v["video_id"] for v in unique)
+            if unique:
+                all_playlists.append({**pl, "videos": unique, "n_videos": len(unique)})
+
+    catalog = {
+        "channel_url": args.channel_url[0],
+        "fetched_at":  datetime.now(timezone.utc).isoformat(),
+        "playlists":   all_playlists,
+    }
 
     if args.detect_subs:
         sys.path.insert(0, str(Path(__file__).parent))
