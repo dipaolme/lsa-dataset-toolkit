@@ -2,6 +2,9 @@ data/raw/
 data/subtitles/
 data/keypoints/
 data/dataset/
+data/catalog/
+notebooks/data/
+.venv/
 *.pyc
 __pycache__/
 .ipynb_checkpoints/
