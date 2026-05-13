@@ -2,6 +2,7 @@ data/raw/
 data/subtitles/
 data/lsa_raw/videos/
 notebooks/data/
+data/catalog
 .venv/
 *.pyc
 __pycache__/
