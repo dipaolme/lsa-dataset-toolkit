@@ -1,8 +1,6 @@
 data/raw/
 data/subtitles/
-data/keypoints/
-data/dataset/
-data/catalog/
+data/lsa_raw/videos/
 notebooks/data/
 .venv/
 *.pyc

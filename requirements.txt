@@ -4,9 +4,12 @@ mediapipe
 pysrt
 webvtt-py
 pandas
+openpyxl
 numpy
 matplotlib
 jupyter
 ipywidgets
 pytesseract
 PyYAML
+h5py
+nltk
