@@ -67,29 +67,34 @@ Cada frame en el JSON de salida tiene: `frame`, `vector` (lista de 1086 floats),
 
 ## Entradas del dataset
 
-`build_dataset.py` produce entradas con este esquema:
+`build_toy_dataset.py` produce entradas con este esquema:
 
 ```json
 {
   "id": "<video_stem>_<index>",
-  "gloss": "texto del segmento de subtítulo",
+  "text": "texto completo del subtítulo del clip",
   "source": "video_stem",
-  "frames": {"start": 120, "end": 180},
-  "keypoints": [ ...frames... ],
+  "n_frames": 572,
+  "feature_size": 1086,
+  "keypoints": [ [1086 floats], ... ],
   "metadata": {
-    "intent": null,
-    "tramite": null,
-    "subtitle_type": "auto_cc",
-    "sync_ok": true,
-    "confidence_avg": 0.73,
-    "fps": 30.0,
-    "time_start": 4.0,
-    "time_end": 6.0
+    "intent": "salud",
+    "tramite": "5_cobertura_porteña_salud",
+    "playlist": "Guía de Información 2018/2019 | Salud",
+    "yt_title": "5. Cobertura Porteña Salud",
+    "duration_s": 19.09,
+    "fps": 29.97,
+    "confidence_avg": 0.758,
+    "pose_pct": 1.0,
+    "face_pct": 1.0,
+    "left_hand_pct": 0.829,
+    "right_hand_pct": 0.795,
+    "word_count": 55
   }
 }
 ```
 
-`intent` y `tramite` se pasan por CLI; son `null` si no se especifican.
+`keypoints` es una lista plana de vectores (un vector por frame), no anidada por frame. `intent` y `tramite` se leen del catálogo `raw_lsa.xlsx`.
 
 ## Configuración
 

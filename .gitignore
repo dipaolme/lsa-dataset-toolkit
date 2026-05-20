@@ -3,6 +3,9 @@ data/subtitles/
 data/lsa_raw/videos/
 notebooks/data/
 data/catalog
+data/dataset/*.json
+data/dataset/*_test.*
+.vscode/
 .venv/
 *.pyc
 __pycache__/
