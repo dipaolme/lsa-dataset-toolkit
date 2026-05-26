@@ -1,129 +1,157 @@
 ---
 name: strategic-decisions-avatar-ai
-description: "Decisiones estratégicas clave, insights y accionables del proyecto Avatar AI — sesión mayo 2026"
+description: "Decisiones estratégicas, arquitectura del POC, accionables — actualizado 2026-05-26"
 metadata: 
   node_type: memory
   type: project
-  originSessionId: d389935d-31c5-4a0f-93f0-1af550f9a0dc
+  updated: 2026-05-26
+  originSessionId: 9370954d-c2d9-47e4-8057-939c81870dfc
 ---
-
-**Fecha:** 2026-05-17
 
 ## Objetivo del POC (Diciembre 2026)
 
-Persona seña frente a tótem/computadora → sistema identifica intención → agente acciona → respuesta en pantalla (texto + avatar simulado con videos pre-grabados en LSA).
+Persona seña frente a tótem → sistema identifica intención → agente acciona → respuesta en pantalla + avatar en LSA (videos pre-grabados).
 
-**NO es:** traducción perfecta palabra por palabra.
-**SÍ es:** intent accuracy suficiente para que un agente accione.
 **Métrica de éxito:** intent accuracy, no BLEU.
+**Avatar POC:** videos pre-grabados, NO síntesis generada. Síntesis es objetivo 2027.
 
 ---
 
-## Decisión de path: Path B — generar videos propios
+## Decisión de path: Path B — generar videos propios (sordatón)
 
-**Evidencia:** hapax legomena 61.8% en corpus GCBA existente → mismo problema que LSA-T.
-Curar más videos existentes amplía el problema, no lo resuelve.
+Hapax 61.8% en corpus GCBA + 55.4% en Legislatura → misma limitación estructural.
+Path A (curar existentes) no resuelve el problema estadístico.
 
-**Path B = sordatón:**
-- Vocabulario controlado, clips cortos (~5-10s), intent labels desde el diseño
-- Un evento genera DOS outputs: clips de entrenamiento + clips de respuesta para el avatar simulado
-- El grupo aliado construye la herramienta (OBS + Python + interfaz de anotación)
-
-**Path A (curar existentes)** no descartado para material de Legislatura si el análisis lingüístico muestra hapax < 30%. Usar `scripts/analyze_subtitles.py` para verificar cuando llegue el material.
+**Path B = sordatón:** vocabulario controlado, clips cortos (~5-10s), intent labels desde el diseño.
+Un evento genera DOS outputs: clips de entrenamiento + clips de respuesta para el avatar.
 
 ---
 
-## Arquitectura dual-track (POC)
+## Arquitectura del POC — DOS escenarios reales
+
+### Escenario A — Sin fine-tuning (sin Juan o sin datos suficientes)
+```
+keypoints → mean pooling crudo → clasificador simple (SVM/logistic) → intent
+```
+Sin Signformer. Plan de emergencia. Puede funcionar, puede no funcionar.
+
+### Escenario B — Con fine-tuning (con Juan + GPU + datos anotados)
+```
+keypoints → Signformer completo entrenado
+          → encoder → mean pooling → clasificador → intent   (Track B)
+          → decoder → texto en pantalla                      (Track A)
+```
+Fine-tuning entrena encoder+decoder juntos. Track B es parasitario del encoder entrenado.
+Track A (traducción visible en pantalla) suma valor en la demo pero no es indispensable.
+
+**No hay escenario intermedio real** — o tenés Signformer fine-tuneado o no lo tenés.
+
+---
+
+## Cómo funciona el clasificador de intent (Track B)
 
 ```
-Track A: keypoints → Signformer → texto español (display)
-Track B: keypoints → clasificador de intención → agente acciona
+Secuencia keypoints (T × 1086)
+        ↓
+   Encoder Signformer → (T × 512) vectores contextuales
+        ↓
+   Mean pooling → un solo vector de 512
+        ↓
+   Capa lineal pequeña → "renovar_dni" con 87% probabilidad
 ```
 
-- Corren en paralelo sobre los mismos keypoints
-- Track B es el salvaguarda: si Track A falla, Track B igual detecta la intención
-- Track B es un clasificador simple, corre en CPU, necesita ~50 clips por intención
-- Dataset necesita DOS labels por clip: `text` (Track A) + `intent` (Track B)
-
-**Why:** con datos limitados, intent classification es más alcanzable que traducción word-by-word. Con vocabulario acotado de trámites, 50-150 clips por intención son suficientes para Track B.
+**Mean pooling** = promedio de todos los vectores del encoder a lo largo del tiempo.
+Técnica estándar en NLP (BERT para clasificación). No probada específicamente en LSA con Signformer — pregunta pendiente para Juan.
 
 ---
 
-## Avatar simulado (gestión del director)
+## UX del POC — diseño confirmado
 
-El director (Sebastián Tsuji) quiere avatar que responde en LSA. Síntesis real = 2027.
+```
+Avatar saluda en LSA → "¿En qué te puedo ayudar?"
+        ↓
+Persona seña su pedido (~5-10s)
+        ↓
+Sistema detecta pausa → inferencia batch
+        ↓
+Clasificador detecta intent → "renovar_dni"
+        ↓
+Avatar responde con video pre-grabado en LSA
+```
 
-**Solución POC:** videos pre-grabados en LSA. La sordatón genera AMBOS:
-1. Clips de input para entrenar el modelo
-2. Clips de respuesta (1 por intent) para el avatar del POC
-
-**Comunicación al director:** "avatar como visión 2027" ≠ "avatar simulado para el POC". Conversación pendiente.
-
----
-
-## Curriculum learning
-
-Propuesta para Juan: entrenar primero con frases muy cortas y vocabulario básico (10-15 frases), luego escalar.
-**Pendiente validar con Juan:** si conviene y cómo estructura los datos.
-
----
-
-## Latencia / POC inference
-
-- Signformer es batch (encoder bidireccional) — necesita clip completo
-- **Enfoque más viable para POC:** detección de pausa + inferencia batch → ~1-2s latencia
-- Causal masking: posible sin cambiar arquitectura pero requiere reentrenar y baja calidad → no recomendado
-- **Incógnita crítica:** tiempo de inferencia en CPU → define si POC necesita GPU
+Este diseño controla el contexto: el usuario sabe que tiene que señar después del saludo. Los clips del sordatón son respuestas a "¿en qué te puedo ayudar?" — vocabulario más acotado y repetitivo naturalmente.
 
 ---
 
-## Pregunta crítica pendiente de Juan: fine-tuning
+## Curriculum learning — cómo aplica al sordatón
 
-¿Se puede hacer fine-tuning desde el modelo LSA-T ya entrenado de Juan?
-Si SÍ → cantidad de clips necesarios cae de ~1000 a ~200-300. Cambia el tamaño de la sordatón.
-Esta pregunta es la más importante de la reunión.
+No significa "señas básicas primero" (alfabeto, números, saludos).
+Significa estructurar la dificultad de los **trámites** en fases:
+
+```
+Fase 1: 5-10 intenciones muy distintas entre sí, clips cortos (~3-5s), muchas repeticiones
+Fase 2: más intenciones, clips más naturales, más variación en cómo se seña
+Fase 3: rango completo, LSA más natural
+```
+
+Beneficio: el modelo converge más eficientemente. ¿Cuánto reduce la cantidad de clips? → pregunta para Juan.
 
 ---
 
-## Métricas de trainabilidad para evaluar corpus
+## La pregunta más importante (pendiente de Juan)
 
-- **Hapax legomena %:** >40% = no entrenable | 20-40% = insuficiente | <20% = razonable
-- **Coverage@5:** % palabras únicas que aparecen ≥5 veces
+**¿Podés hacer fine-tuning desde tu checkpoint LSA-T?**
+
+- SÍ → ~300-500 clips en sordatón, Colab Pro (~10 USD/mes) alcanza
+- NO → 5000+ clips desde cero, no viable para diciembre
+
+Esta respuesta cambia TODO: cuántos clips grabar, qué GPU conseguir, si el POC de diciembre es realista.
+
+---
+
+## Cuántos clips necesitamos (estimaciones)
+
+| Escenario | Clips totales | Horas de grabación | Viable |
+|---|---|---|---|
+| Track B solo (sin Juan) | 750-2500 | 8-50hs | Difícil pero posible |
+| Fine-tuning desde checkpoint | 300-1000 | 4-13hs | ✅ Viable con 1-2 jornadas |
+| Desde cero | 5000+ | 50+hs | ❌ No viable para diciembre |
+
+---
+
+## Métricas de trainabilidad del corpus
+
+- **Hapax %:** >40% = no entrenable | 20-40% = insuficiente | <20% = razonable
+- Corpus GCBA actual: 61.8% → NO entrenable
+- Corpus Legislatura: 55.4% → NO entrenable
 - Script: `python scripts/analyze_subtitles.py <directorio>`
-- Resultado corpus GCBA actual: hapax 61.8%, coverage@5 9.6% → NO entrenable tal cual
-
----
-
-## Bloqueantes críticos (urgentes)
-
-1. **GPU** — sin GPU Juan no entrena. Opciones: CCAD-UNC, Córdoba, UBA, Colab Pro/GCP
-2. **Specs herramienta → grupo aliado** — necesitan specs antes de seguir construyendo
-3. **Fecha sordatón** — target julio-agosto. Sin fecha no existe
-4. **Rol de Jorge** — indefinido. Resolver adentro o afuera del plan
-5. **Taxonomía de intents** — 15-25 trámites específicos GCBA, idealmente con input de comunidad sorda
 
 ---
 
 ## Accionables
 
 ### Completados ✅
-- [x] Toy dataset 29 casos generado y analizado
-- [x] Notebook reestructurada con secciones alineadas a la agenda
-- [x] `scripts/analyze_subtitles.py` creado
-- [x] `data/docs/agenda_reunion_juan.md` creado
-- [x] `data/docs/preguntas_tecnicas_juan.md` creado
-- [x] `data/docs/roadmap_avatar_ai.md` actualizado
-- [x] Mensaje a Juan Bratti enviado (17/05/2026)
+- [x] Toy dataset 29 casos
+- [x] Notebook reestructurada para reunión Juan
+- [x] `analyze_subtitles.py` creado
+- [x] Docs reunión director creados
+- [x] Análisis lingüístico Legislatura
+- [x] Reunión con director (18/05/2026) — entendió 2 tracks, alineado
 
-### Pendientes ⏳
-- [ ] Reunión Juan Bratti + Sebastián Tsuji
-- [ ] Reunión con grupo aliado → darles specs de la herramienta
-- [ ] Resolver GPU (Córdoba / UBA / cloud)
-- [ ] Fijar fecha sordatón (julio o agosto)
-- [ ] Conversación con director sobre avatar: visión 2027 vs. simulado POC
-- [ ] Clarificar rol de Jorge
-- [ ] Análisis lingüístico de subtítulos Legislatura cuando lleguen
-- [ ] Taxonomía de intents (idealmente con input comunidad sorda)
-- [ ] `scripts/to_signformer.py` — convertir JSON → HDF5 + CSV
+### Esta semana ⏳
+- [ ] Mail a Juan Bratti hoy (26/05)
+- [ ] Reunión Jorge 26/05 16:30
+- [ ] Prueba de concepto clasificador con 29 clips (mean pooling + SVM)
 
-**How to apply:** Antes de cada sesión verificar qué bloqueante es más urgente y si la reunión con Juan ya ocurrió (cambia las prioridades completamente).
+### Cuando Juan responda
+- [ ] Taxonomía de intents (15-25 trámites GCBA)
+- [ ] GPU — cuánta y cuál
+- [ ] Diseño del sordatón
+- [ ] Specs para el grupo aliado
+
+### No hacer todavía
+- [ ] Entrenar encoder desde cero
+- [ ] Pagar intérpretes para curar videos existentes
+- [ ] `to_signformer.py`
+
+**How to apply:** La prueba de concepto del clasificador es el próximo hito técnico concreto. Todo lo demás espera a Juan.

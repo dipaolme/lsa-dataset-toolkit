@@ -1,111 +1,84 @@
 ---
 name: estado-del-repo-lsa-dataset-toolkit
-description: "Qué hay en el repo, qué funciona, estado del toy dataset, decisiones estratégicas tomadas y próximos pasos"
+description: "Qué hay en el repo, qué funciona, estado del toy dataset, prioridades de la semana y próximos pasos — actualizado 2026-05-26"
 metadata: 
   node_type: memory
   type: project
-  originSessionId: d389935d-31c5-4a0f-93f0-1af550f9a0dc
+  updated: 2026-05-26
+  originSessionId: 9370954d-c2d9-47e4-8057-939c81870dfc
 ---
 
 **Repo:** `/home/dipa/Proyectos/gcba/lsa-dataset-toolkit`
-**Propósito:** Explorar y validar qué data disponible en YouTube GCBA sirve para entrenar el modelo Signformer/LSA-T. Parte del proyecto Avatar AI (COPIDIS/GCBA).
-**Última actualización:** 2026-05-18
+**Propósito:** Explorar y validar qué data disponible sirve para entrenar Signformer/LSA-T. Parte del proyecto Avatar AI (COPIDIS/GCBA).
 
 ---
 
-## Estado actual (mayo 2026)
+## Estado actual (2026-05-26)
 
 ### Toy Dataset — 29 casos ✅ COMPLETO
 
-```bash
-python scripts/build_toy_dataset.py --catalog data/docs/raw_lsa.xlsx --sample-rate 2
-# Correr desde la raíz del repo (no desde scripts/)
-```
-
-**Outputs generados:**
-- `data/dataset/toy_dataset.json` — 29 entradas con keypoints (1086 features/frame)
+- `data/dataset/toy_dataset.json` — 29 entradas, schema: `["id", "text", "source", "n_frames", "feature_size", "keypoints", "metadata"]`
 - `data/dataset/toy_dataset.csv` — metadata liviana
-- `data/dataset/toy_test.json` / `toy_test.csv` — 1 entrada de prueba (misma estructura, gitignored)
+- 7 intenciones: accesibilidad, educacion, vida_independiente, trabajo, transporte, salud, servicios_sociales
+- Duración media: 24.3s (3x más largo que LSA-T promedio de 9.36s)
+- Hapax legomena: 61.8% → NO entrenable tal cual
 
-**Schema actual de toy_dataset.json** (evolucionó desde CLAUDE.md — actualizar):
-```json
-["id", "text", "source", "n_frames", "feature_size", "keypoints", "metadata"]
-```
-- Campo renombrado: `gloss` → `text`
-- Nuevos campos top-level: `n_frames`, `feature_size`
-- Metadata más rica: `tramite`, `playlist`, `yt_title`, `duration_s`, `fps`, `confidence_avg`, `pose_pct`, `face_pct`, `left_hand_pct`, `right_hand_pct`, `word_count`
+### Análisis lingüístico
+- Corpus GCBA 29 clips: hapax 61.8%, coverage@5 9.6% → problema estructural
+- Corpus Legislatura (1 sesión): hapax 55.4% → mismo problema
+- Conclusión: Path B (sordatón con vocabulario controlado) es el camino
 
-**data/lsa_raw/:**
-- `subtitles/` — 29 archivos .txt (subtítulos de los 29 videos del toy dataset)
-- `videos/` — 49 archivos .MOV (más videos que subtítulos → no todos procesados)
-
-**Estadísticas del dataset:**
-- 29 clips | feature_size: 1086
-- Duración media: **24.3s** | min: 13.6s | max: 37.0s
-- Frames media: 728 | min: 407 | max: 1110
-- ⚠ LSA-T promedia 9.36s — nuestros clips son ~3x más largos → requieren segmentación
-
-**Distribución por intent:**
-Educación(6), Accesibilidad(6), Transporte(5), Trabajo(5), Servicios Sociales(3), Salud(3), Vida Independiente(1)
-
-### Análisis lingüístico — resultado clave
-
-Corrido con `scripts/analyze_subtitles.py` sobre los 29 subtítulos .txt:
-
-- **Hapax legomena: 61.8%** → peor que LSA-T (>50%). Vocabulario muy disperso.
-- Coverage@5: 9.6% — muy pocas palabras aparecen 5+ veces
-- TTR global: 0.337
-- Bigrama más frecuente: "con discapacidad" (31x)
-
-**Conclusión:** el corpus GCBA existente tiene el mismo problema que LSA-T. No es entrenable sin cambios radicales de diseño.
-
-### Decisión estratégica tomada: Path B
-
-Generar videos propios (sordatón) en lugar de curar videos existentes.
-Ver `memory/strategic_decisions.md` para el detalle completo.
+### Scripts disponibles
+| Script | Estado |
+|---|---|
+| `extract_keypoints.py` | ✅ |
+| `build_toy_dataset.py` | ✅ |
+| `analyze_subtitles.py` | ✅ |
+| `to_signformer.py` | ❌ pendiente — no es prioridad inmediata |
 
 ---
 
-## Scripts disponibles
+## Prioridades semana 2026-05-26
 
-### scripts/
-| Script | Función | Estado |
-|---|---|---|
-| `extract_keypoints.py` | MediaPipe Tasks → vector 1086 features/frame | ✅ |
-| `build_toy_dataset.py` | 29 casos: subtítulos + keypoints → JSON + CSV | ✅ |
-| `analyze_subtitles.py` | **NUEVO** Análisis lingüístico de corpus .txt/.srt/.vtt | ✅ |
-| `to_signformer.py` | JSON → HDF5 (2172) + CSV para LSAKeypointDataset | ⏳ pendiente |
+### AHORA — sin dependencias externas
+1. **Mail a Juan Bratti** — hoy, 5 minutos. LinkedIn sin respuesta hace 10 días, usar email.
+2. **Reunión Jorge** — 26/05 16:30. Preguntar: estado servidor + pipeline síntesis.
+3. **Prueba de concepto clasificador** — esta semana. Usar 29 clips existentes:
+   - Mean pooling de keypoints → un vector por clip
+   - SVM o regresión logística sobre las 7 intenciones
+   - Objetivo: validar si Track B es viable antes del sordatón
+   - Sin GPU, sin Juan, sin intérpretes
 
-**Uso de analyze_subtitles.py:**
-```bash
-python scripts/analyze_subtitles.py data/lsa_raw/subtitles/
-python scripts/analyze_subtitles.py data/legislatura/subtitles/ --output data/docs/analisis_legislatura.json
-```
+### CUANDO JUAN RESPONDA — se desbloquea todo esto
+4. Taxonomía de intents (15-25 trámites GCBA)
+5. GPU — cuánta y cuál (depende de si hay fine-tuning desde checkpoint o desde cero)
+6. Diseño del sordatón (cuántos clips, protocolo)
+7. Specs para el grupo aliado
 
-### Docs generados (data/docs/)
-- `agenda_reunion_juan.md` — agenda estructurada para reunión con Juan Bratti + director
-- `preguntas_tecnicas_juan.md` — 6 bloques de preguntas técnicas para Juan
-- `roadmap_avatar_ai.md` — roadmap actualizado con estado real al 17/05/2026
+### PARALELO — no urgente
+8. Recolección de más videos sin anotar (director lo pidió)
+9. Un mensaje al contacto GPU de Córdoba para calentar relación
+
+### NO HACER TODAVÍA
+- Entrenar encoder desde cero en Colab → esperá respuesta de Juan
+- Pagar intérpretes para curar videos existentes → sin saber cuántos clips necesitás
+
+---
+
+## Bloqueante crítico único
+
+**Una sola pregunta de Juan desbloquea todo:**
+¿Podés hacer fine-tuning desde tu checkpoint LSA-T?
+- SÍ → ~300-500 clips en sordatón, Colab Pro alcanza
+- NO → 5000+ clips desde cero, no viable para diciembre
 
 ---
 
 ## Notebook
 
-`notebooks/toy_dataset_analysis.ipynb` — reestructurado para reunión con Juan:
-- **Sección 1:** Calidad de keypoints — tabla gradiente, boxplots, duración vs LSA-T, sample rate, imputación
-- **Sección 2:** Análisis lingüístico — hapax %, coverage@N, TTR, bigramas, intent con nota de granularidad
-- **Sección 3:** Simulacro de escala vs LSA-T
+`notebooks/toy_dataset_analysis.ipynb` — reestructurado con 3 secciones:
+1. Calidad de keypoints
+2. Análisis lingüístico
+3. Simulacro de escala vs LSA-T
 
-La visualización interactiva de keypoints (slider) fue eliminada del notebook — está en `explore_dataset.ipynb`.
-
----
-
-## Próximos pasos concretos
-
-1. **Reunión Juan Bratti + Sebastián Tsuji** — mensaje enviado (17/05), esperando respuesta
-2. **Reunión con grupo aliado** — darles specs: clips ~5-10s, labels text+intent, formato HDF5+CSV
-3. **GPU** — resolver: CCAD-UNC (Juan lo usó), Córdoba, UBA, o cloud pago (Colab Pro)
-4. **Fecha sordatón** — fijar julio o agosto antes de que sea tarde para el POC de diciembre
-5. **Taxonomía de intents** — 15-25 trámites específicos GCBA para el POC
-
-**How to apply:** El toy dataset existe y el notebook corre. El próximo hito técnico es `to_signformer.py` para convertir a HDF5. El próximo hito estratégico es la reunión con Juan.
+**How to apply:** El toy dataset existe y el notebook corre. El próximo hito técnico es la prueba de concepto del clasificador (esta semana). El próximo hito estratégico es la respuesta de Juan.
