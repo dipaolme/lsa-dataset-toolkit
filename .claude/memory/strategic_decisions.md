@@ -1,157 +1,64 @@
 ---
 name: strategic-decisions-avatar-ai
-description: "Decisiones estratégicas, arquitectura del POC, accionables — actualizado 2026-05-26"
+description: Decisiones estratégicas clave del proyecto Avatar AI — mayo 2026
 metadata: 
   node_type: memory
   type: project
-  updated: 2026-05-26
-  originSessionId: 9370954d-c2d9-47e4-8057-939c81870dfc
+  originSessionId: 1a8ff457-40e7-4b80-83b1-13ff5ed1481b
 ---
+
+**Última actualización:** 2026-05-17
 
 ## Objetivo del POC (Diciembre 2026)
 
-Persona seña frente a tótem → sistema identifica intención → agente acciona → respuesta en pantalla + avatar en LSA (videos pre-grabados).
+Persona seña frente a tótem → sistema identifica intención → agente acciona → respuesta (texto + avatar simulado con videos pre-grabados LSA).
+- **Métrica de éxito:** intent accuracy, no BLEU.
+- **NO es:** traducción perfecta. **SÍ es:** intent accuracy suficiente para accionar un agente.
 
-**Métrica de éxito:** intent accuracy, no BLEU.
-**Avatar POC:** videos pre-grabados, NO síntesis generada. Síntesis es objetivo 2027.
+## Decisión: Path B — Sordatón (generar videos propios)
 
----
+**Evidencia:** hapax 61.8% en corpus GCBA existente → no entrenable tal cual.
 
-## Decisión de path: Path B — generar videos propios (sordatón)
+**Path B:** vocabulario controlado, clips cortos (~5-10s), intent labels desde el diseño.
+- La sordatón genera DOS outputs: clips de entrenamiento + clips de respuesta para el avatar simulado.
+- El grupo aliado construye la herramienta (OBS + Python + interfaz de anotación).
 
-Hapax 61.8% en corpus GCBA + 55.4% en Legislatura → misma limitación estructural.
-Path A (curar existentes) no resuelve el problema estadístico.
+**Path A** (curar existentes): no descartado para Legislatura si hapax < 30%. Usar `scripts/analyze_subtitles.py` para verificar.
 
-**Path B = sordatón:** vocabulario controlado, clips cortos (~5-10s), intent labels desde el diseño.
-Un evento genera DOS outputs: clips de entrenamiento + clips de respuesta para el avatar.
-
----
-
-## Arquitectura del POC — DOS escenarios reales
-
-### Escenario A — Sin fine-tuning (sin Juan o sin datos suficientes)
-```
-keypoints → mean pooling crudo → clasificador simple (SVM/logistic) → intent
-```
-Sin Signformer. Plan de emergencia. Puede funcionar, puede no funcionar.
-
-### Escenario B — Con fine-tuning (con Juan + GPU + datos anotados)
-```
-keypoints → Signformer completo entrenado
-          → encoder → mean pooling → clasificador → intent   (Track B)
-          → decoder → texto en pantalla                      (Track A)
-```
-Fine-tuning entrena encoder+decoder juntos. Track B es parasitario del encoder entrenado.
-Track A (traducción visible en pantalla) suma valor en la demo pero no es indispensable.
-
-**No hay escenario intermedio real** — o tenés Signformer fine-tuneado o no lo tenés.
-
----
-
-## Cómo funciona el clasificador de intent (Track B)
+## Arquitectura dual-track (POC)
 
 ```
-Secuencia keypoints (T × 1086)
-        ↓
-   Encoder Signformer → (T × 512) vectores contextuales
-        ↓
-   Mean pooling → un solo vector de 512
-        ↓
-   Capa lineal pequeña → "renovar_dni" con 87% probabilidad
+Track A: keypoints → Signformer → texto español (display)
+Track B: keypoints → clasificador de intención → agente acciona
 ```
+- Corren en paralelo sobre los mismos keypoints
+- Track B es el salvaguarda si Track A falla
+- Track B necesita ~50 clips por intención (simple, corre en CPU)
+- Cada clip necesita DOS labels: `text` (Track A) + `intent` (Track B)
 
-**Mean pooling** = promedio de todos los vectores del encoder a lo largo del tiempo.
-Técnica estándar en NLP (BERT para clasificación). No probada específicamente en LSA con Signformer — pregunta pendiente para Juan.
+## Avatar simulado (para el director)
 
----
-
-## UX del POC — diseño confirmado
-
-```
-Avatar saluda en LSA → "¿En qué te puedo ayudar?"
-        ↓
-Persona seña su pedido (~5-10s)
-        ↓
-Sistema detecta pausa → inferencia batch
-        ↓
-Clasificador detecta intent → "renovar_dni"
-        ↓
-Avatar responde con video pre-grabado en LSA
-```
-
-Este diseño controla el contexto: el usuario sabe que tiene que señar después del saludo. Los clips del sordatón son respuestas a "¿en qué te puedo ayudar?" — vocabulario más acotado y repetitivo naturalmente.
-
----
-
-## Curriculum learning — cómo aplica al sordatón
-
-No significa "señas básicas primero" (alfabeto, números, saludos).
-Significa estructurar la dificultad de los **trámites** en fases:
-
-```
-Fase 1: 5-10 intenciones muy distintas entre sí, clips cortos (~3-5s), muchas repeticiones
-Fase 2: más intenciones, clips más naturales, más variación en cómo se seña
-Fase 3: rango completo, LSA más natural
-```
-
-Beneficio: el modelo converge más eficientemente. ¿Cuánto reduce la cantidad de clips? → pregunta para Juan.
-
----
-
-## La pregunta más importante (pendiente de Juan)
-
-**¿Podés hacer fine-tuning desde tu checkpoint LSA-T?**
-
-- SÍ → ~300-500 clips en sordatón, Colab Pro (~10 USD/mes) alcanza
-- NO → 5000+ clips desde cero, no viable para diciembre
-
-Esta respuesta cambia TODO: cuántos clips grabar, qué GPU conseguir, si el POC de diciembre es realista.
-
----
-
-## Cuántos clips necesitamos (estimaciones)
-
-| Escenario | Clips totales | Horas de grabación | Viable |
-|---|---|---|---|
-| Track B solo (sin Juan) | 750-2500 | 8-50hs | Difícil pero posible |
-| Fine-tuning desde checkpoint | 300-1000 | 4-13hs | ✅ Viable con 1-2 jornadas |
-| Desde cero | 5000+ | 50+hs | ❌ No viable para diciembre |
-
----
+Síntesis real de avatar LSA = 2027. Para el POC: videos pre-grabados LSA.
+La sordatón genera ambos (clips de input + clips de respuesta por intent).
+**Comunicación pendiente al director:** "avatar como visión 2027" ≠ "avatar simulado para el POC".
 
 ## Métricas de trainabilidad del corpus
 
-- **Hapax %:** >40% = no entrenable | 20-40% = insuficiente | <20% = razonable
-- Corpus GCBA actual: 61.8% → NO entrenable
-- Corpus Legislatura: 55.4% → NO entrenable
+- Hapax >40% = no entrenable | 20-40% = insuficiente | <20% = razonable
+- Coverage@5: % palabras únicas con ≥5 apariciones
 - Script: `python scripts/analyze_subtitles.py <directorio>`
 
----
+## Pregunta crítica para Juan Bratti
 
-## Accionables
+¿Fine-tuning desde modelo LSA-T ya entrenado?
+- Si SÍ → clips necesarios bajan de ~1000 a ~200-300. Cambia el tamaño de la sordatón.
 
-### Completados ✅
-- [x] Toy dataset 29 casos
-- [x] Notebook reestructurada para reunión Juan
-- [x] `analyze_subtitles.py` creado
-- [x] Docs reunión director creados
-- [x] Análisis lingüístico Legislatura
-- [x] Reunión con director (18/05/2026) — entendió 2 tracks, alineado
+## Bloqueantes críticos
 
-### Esta semana ⏳
-- [ ] Mail a Juan Bratti hoy (26/05)
-- [ ] Reunión Jorge 26/05 16:30
-- [ ] Prueba de concepto clasificador con 29 clips (mean pooling + SVM)
+1. **GPU** — sin GPU Juan no entrena. Opciones: CCAD-UNC, Córdoba, UBA, Colab Pro
+2. **Specs → grupo aliado** — necesitan specs antes de seguir construyendo
+3. **Fecha sordatón** — target julio-agosto
+4. **Rol de Jorge** — indefinido
+5. **Taxonomía de intents** — 15-25 trámites GCBA
 
-### Cuando Juan responda
-- [ ] Taxonomía de intents (15-25 trámites GCBA)
-- [ ] GPU — cuánta y cuál
-- [ ] Diseño del sordatón
-- [ ] Specs para el grupo aliado
-
-### No hacer todavía
-- [ ] Entrenar encoder desde cero
-- [ ] Pagar intérpretes para curar videos existentes
-- [ ] `to_signformer.py`
-
-**How to apply:** La prueba de concepto del clasificador es el próximo hito técnico concreto. Todo lo demás espera a Juan.
+**How to apply:** Antes de cada sesión verificar si la reunión con Juan ya ocurrió — cambia las prioridades completamente. El criterio de éxito es intent accuracy, no calidad de traducción.

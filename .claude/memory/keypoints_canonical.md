@@ -1,6 +1,6 @@
 ---
 name: extract_keypoints.py — versión canónica
-description: Detalles técnicos de la versión correcta de extract_keypoints.py — MediaPipe Tasks API, estructura 1086 features
+description: Detalles técnicos de extract_keypoints.py — MediaPipe Tasks API, estructura 1086 features, flag --3d
 type: project
 originSessionId: fffc986a-d61a-4ef2-8f5e-5c03b0e34450
 ---
@@ -30,5 +30,10 @@ FaceLandmarker devuelve 478 puntos; se toman los primeros 468 (face mesh sin iri
 - Cara detectada: 87% frames
 - Confidence avg: ~0.73
 - Manos: ~50% cada una (normal — señas unimanuales)
+
+## Flag --3d (agregado 01/06/2026)
+`python scripts/extract_keypoints.py video.mp4 --3d --output output_3d.json`
+Agrega `landmarks_3d` por frame: pose [x,y,z,vis], right_hand/left_hand [x,y,z]. Cara excluida.
+Compatible con el viewer 3D en `signary_viewer/`.
 
 **How to apply:** Antes de trabajar en el toolkit verificar que los modelos están en `models/`. El venv está en `.venv/` dentro del repo.
