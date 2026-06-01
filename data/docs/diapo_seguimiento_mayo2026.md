@@ -17,11 +17,11 @@
 |---|---|---|
 | **2** | **Fuentes relevadas** | Canal YouTube GCBA (COPIDIS) · Sesión Legislatura |
 | **103 videos · 1 sesión** | **Material analizado** | COPIDIS: ~10 hs totales, solo 41 min curados · Legislatura: sesión completa disponible |
-| **3** | **Limitaciones identificadas** | Legislatura: recuadro reducido · subtítulos sin curar · vocabulario amplio |
+| **3** | **Limitaciones identificadas** | COPIDIS: escaso material con subtítulos · subtítulos hardcodeados en video · Legislatura: recuadro reducido · subtítulos sin curar · vocabulario amplio |
 
 **Acciones en curso:**
-- Material crudo Legislatura solicitado
-- Alianza Signai activada · servidor compartido operativo
+- Material crudo Legislatura disponible
+- Alianza Signai activada para procesamiento y curación del material · servidor compartido operativo para intercambio
 
 **En evaluación:** generación de video propio con vocabulario acotado de trámites GCBA
 

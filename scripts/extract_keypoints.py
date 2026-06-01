@@ -82,6 +82,42 @@ def _lm_to_xy(landmarks, n: int) -> np.ndarray:
     return arr
 
 
+def _lm_to_xyz_pose(landmarks, n: int) -> list:
+    """Pose landmarks → lista de [x, y, z, visibility]."""
+    if not landmarks:
+        return [[0.0, 0.0, 0.0, 0.0]] * n
+    return [[lm.x, lm.y, lm.z, lm.visibility] for lm in landmarks[:n]]
+
+
+def _lm_to_xyz_hand(landmarks, n: int) -> list:
+    """Hand landmarks → lista de [x, y, z]. Manos no tienen visibility en MediaPipe."""
+    if not landmarks:
+        return [[0.0, 0.0, 0.0]] * n
+    return [[lm.x, lm.y, lm.z] for lm in landmarks[:n]]
+
+
+def _extract_frame_3d(pose_res, hand_res) -> dict:
+    """Extrae x, y, z (+ visibility para pose) de pose y manos. Cara excluida."""
+    pose_lms = pose_res.pose_landmarks[0] if pose_res.pose_landmarks else None
+
+    left_xyz  = [[0.0, 0.0, 0.0]] * N_HAND
+    right_xyz = [[0.0, 0.0, 0.0]] * N_HAND
+    for i, handedness in enumerate(hand_res.handedness):
+        label = handedness[0].category_name
+        lms = hand_res.hand_landmarks[i]
+        xyz = _lm_to_xyz_hand(lms, N_HAND)
+        if label == "Left":
+            left_xyz = xyz
+        else:
+            right_xyz = xyz
+
+    return {
+        "pose":       _lm_to_xyz_pose(pose_lms, N_POSE),
+        "right_hand": right_xyz,
+        "left_hand":  left_xyz,
+    }
+
+
 def _extract_frame(pose_res, face_res, hand_res) -> np.ndarray:
     """Arma el vector de 1086 features para un frame."""
     # Pose: 33 kp
@@ -125,6 +161,7 @@ def extract_keypoints(
     config: dict,
     frame_start: int = 0,
     frame_end: int = None,
+    include_3d: bool = False,
 ) -> dict:
     pose_det, face_det, hand_det = _build_detectors(config)
 
@@ -156,7 +193,7 @@ def extract_keypoints(
             conf   = _confidence_avg(pose_res)
             confidences.append(conf)
 
-            frames_data.append({
+            frame_entry = {
                 "frame": frame_idx,
                 "vector": vector.tolist(),        # (1086,) — listo para guardar
                 "pose_detected":  bool(pose_res.pose_landmarks),
@@ -164,7 +201,10 @@ def extract_keypoints(
                 "left_hand":      any(h[0].category_name == "Left"  for h in hand_res.handedness),
                 "right_hand":     any(h[0].category_name == "Right" for h in hand_res.handedness),
                 "confidence":     round(conf, 4),
-            })
+            }
+            if include_3d:
+                frame_entry["landmarks_3d"] = _extract_frame_3d(pose_res, hand_res)
+            frames_data.append(frame_entry)
 
         frame_idx += 1
 
@@ -193,6 +233,8 @@ if __name__ == "__main__":
     parser.add_argument("--frame-end",   type=int, default=None)
     parser.add_argument("--sample-rate", type=int, default=None,
                         help="1 de cada N frames (sobreescribe config)")
+    parser.add_argument("--3d", action="store_true", dest="include_3d",
+                        help="Incluir landmarks_3d (x,y,z) por frame además del vector 1086")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -200,7 +242,7 @@ if __name__ == "__main__":
         config["dataset"]["sample_rate"] = args.sample_rate
 
     video_path = Path(args.video)
-    result = extract_keypoints(video_path, config, args.frame_start, args.frame_end)
+    result = extract_keypoints(video_path, config, args.frame_start, args.frame_end, args.include_3d)
 
     output_path = (
         Path(args.output)

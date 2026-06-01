@@ -5,6 +5,7 @@ notebooks/data/
 data/catalog
 data/dataset/*.json
 data/dataset/*_test.*
+data/signary/videos/
 .vscode/
 .venv/
 *.pyc
