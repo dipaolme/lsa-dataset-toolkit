@@ -7,8 +7,12 @@ metadata:
   originSessionId: 9843d382-6f93-4cdd-97eb-8f4eb23a873f
 ---
 
-**Última actualización:** 2026-05-26
-**Estado:** ⏳ Pendiente — arrancar mañana
+**Última actualización:** 2026-07-01
+**Estado:** ✅ POC COMPLETO (A/B/C). Notebook 04 BiGRU escrito y con cache listo, pero SIN outputs de training guardados.
+
+## ⚠️ Notebook 04 — training NO persistido (verificado 01/07/2026)
+
+Las celdas 14-20 no tienen outputs guardados en el .ipynb. La corrida del 11/06 (llegó a época 15/30) se hizo en Jupyter interactivo y no se guardó. Para retomar: aplicar fixes (MAX_T=800, batch_size=64 en celda 14) y correr desde celda 14. El cache `outputs/encoder_sequences.pkl` (1.4GB) sigue intacto.
 
 ## Objetivo
 

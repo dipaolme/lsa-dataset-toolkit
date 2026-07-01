@@ -7,7 +7,7 @@ metadata:
   originSessionId: current
 ---
 
-**Última actualización:** 2026-06-01
+**Última actualización:** 2026-07-01
 
 ## Objetivo
 Conectar el señario CAS (PDF: palabra → URL YouTube) con el Animator de Jorge (`/home/mdipaola/Animator`).
@@ -77,6 +77,19 @@ Jorge integró el viewer 2D en su servidor Flask. Pidió 3D → viewer 3D constr
 - Curl formula: distancia tip→wrist no captura bien cierre con mano de frente
 - "Mano plana": dedos juntos no soportado en Animator
 - Coordenadas body-relative: mapeo simple pendiente
+
+## Videos Windows → WSL (patrón confirmado 01/07/2026)
+
+Videos en Windows accesibles desde WSL via `/mnt/c/`:
+```bash
+python scripts/extract_keypoints.py "/mnt/c/Users/mdp_e/Gobierno de la Ciudad de Buenos Aires/grupo_DG Inclusión Digital - Documents/02-Proyectos/08-Avatar AI/Material LSA/GUÍA INFO LSA 2018-2019/videos/NOMBRE.MOV"
+```
+- `.MOV` funciona directo, sin convertir a mp4
+- Archivos `._NOMBRE.MOV` (con punto-guion-bajo) = resource fork de macOS, no son el video real
+
+## Videos procesados para Jorge (más allá del señario)
+
+**DSC_0858 p.75 "ayuda tecnica"** (01/07/2026) — video completo, sin `--3d`. Output: `data/keypoints/DSC_0858 p. 75 ayuda tecnica.json`.
 
 ## Pendientes
 1. TE, VINO, YERBA: descargar desde Windows y procesar
